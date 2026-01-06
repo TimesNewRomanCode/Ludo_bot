@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     DB_PORT: int = 5432
     DB_NAME: str = "Ludo"
 
-    BOT_TOKEN: str = "7988930302:AAEtl2VW5DLHllTZlcxjQQ2l6qOF9OTSgK0"
+    BOT_TOKEN: str = "1:1"
 
     @computed_field
     @property
