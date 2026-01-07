@@ -31,29 +31,43 @@ async def show_roulette_html(callback: types.CallbackQuery):
 
     await callback.message.answer(
         f"🎰 **Ваш выбор: {user_choice}**\n"
-        f"🔥 Кликните → крутите → нажмите «В БОТ» для результата!",
+        f"🔥 Кликните → крутите → нажмите «В БОТ»!",
         reply_markup=kb.as_markup(),
         parse_mode="Markdown"
     )
     await callback.answer()
 
 
-# ✅ ФИНАЛЬНЫЙ ХЕНДЛЕР — ЛОВИМ КОМАНДУ /roulette_result!
-@roul_router.message(Command("roulette_result"))
+# ✅ ГЛАВНЫЙ ХЕНДЛЕР — ЛОВИМ ЛЮБОЕ СООБЩЕНИЕ с roulette_result
+@roul_router.message(F.text.contains("roulette_result"))
 async def roulette_result(message: types.Message):
-    """Обрабатываем результат /roulette_result 23 14"""
-    parts = message.text.split()
-    if len(parts) >= 3:
-        result = int(parts[1])
-        user_choice = int(parts[2])
+    """Ловим результат из HTML (любой текст содержащий 'roulette_result')"""
+    text = message.text.lower()
 
-        win_status = "🎉 **ВЫИГРЫШ x35 коинов!**" if result == user_choice else "😔 Проигрыш"
+    # Ищем числа в тексте: roulette_result_23_14 или /roulette_result 23 14
+    import re
+    numbers = re.findall(r'roulette_result[_\s]*(\d+)', text)
+
+    if len(numbers) >= 1:
+        result = int(numbers[0])
+
+        # Ищем второе число (выбор пользователя)
+        choice_numbers = re.findall(r'choice[_\s]*(\d+)', text)
+        user_choice = int(choice_numbers[0]) if choice_numbers else None
+
+        win_status = "🎉 **ВЫИГРЫШ x35 коинов!**" if user_choice and result == user_choice else "😔 Проигрыш"
 
         await message.answer(
             f"🎰 **РЕЗУЛЬТАТ РУЛЕТКИ: {result}**\n"
-            f"🎯 **Ваш выбор: {user_choice}**\n\n"
+            f"🎯 **Ваш выбор: {user_choice if user_choice else 'неизвестно'}**\n\n"
             f"{win_status}\n\n🔄 `/roulette` — еще раз!",
             parse_mode="Markdown"
         )
     else:
-        await message.answer("❌ Неверный формат! Используйте: `/roulette_result НОМЕР_РЕЗУЛЬТАТА НОМЕР_ВЫБРА`")
+        await message.answer("❌ Результат не распознан. Используйте `/roulette`")
+
+
+# Дополнительный хендлер для команды
+@roul_router.message(Command("roulette_result"))
+async def roulette_result_cmd(message: types.Message):
+    await message.answer("🎰 Используйте `/roulette` для начала!")
