@@ -73,9 +73,9 @@ async def process_stars_payment(message: types.Message, session: AsyncSession):
     stars_count = int(message.successful_payment.total_amount)
     await buy_balance(session, chat_id, stars_count)
     await message.answer(
-        f"🎉 Оплата прошла успешно!\n"
+        f"Оплата прошла успешно!\n"
         f"⭐ Вы купили {stars_count} звезд\n"
-        f"💰 Начислено {stars_count * 50} Ludocoins!\n\n"
+        f"Начислено {stars_count * 50} Ludocoins!\n\n"
         f"/getbalance - проверить баланс"
     )
 
