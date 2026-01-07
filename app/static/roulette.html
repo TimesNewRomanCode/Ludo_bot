@@ -1,42 +1,880 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Roulette</title>
-<style>
-body{margin:0;padding:20px;background:linear-gradient(135deg,#1e3c72,#2a5298);font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;color:#fff}
-#container{text-align:center}
-#roulette{border:8px solid #ffd700;border-radius:50%;box-shadow:0 0 30px rgba(255,215,0,.5);cursor:pointer}
-#result{margin-top:20px;font-size:24px;font-weight:700}
-#spinBtn{margin-top:20px;padding:15px 30px;font-size:18px;background:#ffd700;color:#000;border:none;border-radius:25px;cursor:pointer;font-weight:700}
-#spinBtn:hover{background:#ffed4a;transform:scale(1.05)}
-#backBtn{margin-top:15px;padding:12px 25px;font-size:16px;background:#00cc00;color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:700;display:none}
-</style>
+    <meta charset="utf-8">
+    <title>Рулетка</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #rouletteCanvas {
+            border: 5px solid gold;
+            border-radius: 50%;
+            margin: 20px auto;
+            display: block;
+        }
+
+        button {
+            background: #ff416c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        #result {
+            margin: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-<div id="container">
-<h1>🎰 Рулетка</h1>
-<canvas id="roulette" width="400" height="400"></canvas><br>
-<button id="spinBtn">🔄 КРУТИТЬ</button>
-<div id="result">Крутите рулетку!</div><br>
-<button id="backBtn">🏠 ВЕРНУТЬСЯ В БОТ С РЕЗУЛЬТАТОМ</button>
-</div>
+    <h1>🎰 РУЛЕТКА</h1>
 
-<script>
-const canvas=document.getElementById('roulette'),ctx=canvas.getContext('2d'),spinBtn=document.getElementById('spinBtn'),resultDiv=document.getElementById('result'),backBtn=document.getElementById('backBtn');
-const BOT_USERNAME="Ludo77_bot";
-const numbers=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-const redNumbers=[1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-let currentRotation=0,isSpinning=false,userChoice=null,winningNumber=null;
+    <div id="betInfo">Ваша ставка: </div>
 
-function setUserChoice(choice){userChoice=parseInt(choice);resultDiv.textContent=`🎯 Ваш выбор: ${choice} | КРУТИТЬ!`}
-function getWinningNumber(rotation){const normalized=(rotation%360+360)%360;return numbers[Math.floor((360-normalized)/(360/37))%37]}
-function drawRoulette(){ctx.clearRect(0,0,400,400);ctx.save();ctx.translate(200,200);ctx.rotate(-currentRotation*Math.PI/180);for(let i=0;i<37;i++){const startAngle=i/37*2*Math.PI,endAngle=(i+1)/37*2*Math.PI,num=numbers[i],isRed=redNumbers.includes(num),isUserChoice=num===userChoice,isWinning=num===winningNumber;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,170,startAngle,endAngle);ctx.closePath();ctx.fillStyle=isWinning?'#00ff00':isUserChoice?'#ffd700':isRed?'#cc0000':num===0?'#00cc00':'#000000';ctx.fill();ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.stroke();ctx.save();ctx.rotate(startAngle+(endAngle-startAngle)/2);ctx.fillStyle=isWinning||isUserChoice?'#000':'#ffffff';ctx.font=num<=9?'bold 20px Arial':'bold 16px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(num.toString(),75,0);ctx.restore()}ctx.restore();ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(200,200,40,0,2*Math.PI);ctx.fill();ctx.fillStyle='#000';ctx.font='bold 18px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🎰',200,202)}
+    <canvas id="rouletteCanvas" width="400" height="400"></canvas>
 
-function spinWheel(){if(isSpinning)return;isSpinning=true;spinBtn.disabled=true;spinBtn.textContent='🔄 КРУТИТСЯ...';let spinSpeed=25,deceleration=0.98;function animate(){currentRotation+=spinSpeed;spinSpeed*=deceleration;drawRoulette();if(spinSpeed>0.5){requestAnimationFrame(animate)}else{const finalRotation=currentRotation%360;winningNumber=getWinningNumber(finalRotation);resultDiv.innerHTML=`🎉 РЕЗУЛЬТАТ: <strong>${winningNumber}</strong><br><strong style="color:${winningNumber===userChoice?'#00ff00':'#ff4444'}">${winningNumber===userChoice?'🎉 ВЫИГРЫШ!':'😔 Проигрыш'}</strong>`;backBtn.style.display='inline-block';backBtn.onclick=()=>{window.open(`https://t.me/${BOT_USERNAME}?text=roulette_result_${winningNumber}_choice_${userChoice||0}`,'_blank')};spinBtn.disabled=false;spinBtn.textContent='🔄 ЕЩЕ';isSpinning=false}}animate()}
+    <div>
+        <button id="spinBtn">🎰 КРУТИТЬ</button>
+    </div>
 
-spinBtn.addEventListener('click',spinWheel);drawRoulette();
-const urlParams=new URLSearchParams(window.location.search);const choiceFromUrl=urlParams.get('choice');if(choiceFromUrl)setUserChoice(choiceFromUrl);
-</script>
+    <div id="result">Нажмите "Крутить"</div>
+
+    <script>
+        // Получаем ставку из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const userBet = urlParams.get('bet') || '0';
+
+        // Элементы
+        const canvas = document.getElementById('rouletteCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinBtn');
+        const resultDiv = document.getElementById('result');
+        const betInfo = document.getElementById('betInfo');
+
+        // Данные рулетки
+        const numbers = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+        const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+
+        let currentRotation = 0;
+        let isSpinning = false;
+
+        // Показываем ставку
+        betInfo.textContent = `Ваша ставка: ${userBet}`;
+
+        // Отрисовка
+        function drawRoulette() {
+            ctx.clearRect(0, 0, 400, 400);
+
+            // Центр
+            const centerX = 200;
+            const centerY = 200;
+            const radius = 180;
+
+            // Рисуем сектора
+            for (let i = 0; i < 37; i++) {
+                const startAngle = (i / 37) * 2 * Math.PI;
+                const endAngle = ((i + 1) / 37) * 2 * Math.PI;
+                const num = numbers[i];
+
+                // Цвет
+                let color;
+                if (num === 0) color = 'green';
+                else if (redNumbers.includes(num)) color = 'red';
+                else color = 'black';
+
+                // Сектор
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Текст
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + (endAngle - startAngle) / 2);
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(num, radius - 40, 5);
+                ctx.restore();
+            }
+        }
+
+        // Вращение
+        function spinWheel() {
+            if (isSpinning) return;
+
+            isSpinning = true;
+            spinBtn.disabled = true;
+
+            let speed = 25;
+            let deceleration = 0.98;
+
+            function animate() {
+                currentRotation += speed;
+                speed *= deceleration;
+
+                ctx.save();
+                ctx.translate(200, 200);
+                ctx.rotate(currentRotation * Math.PI / 180);
+                ctx.translate(-200, -200);
+                drawRoulette();
+                ctx.restore();
+
+                if (speed > 0.5) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Определяем результат
+                    const finalRotation = currentRotation % 360;
+                    const sector = Math.floor((360 - finalRotation) / (360 / 37)) % 37;
+                    const winningNumber = numbers[sector];
+
+                    // Проверяем выигрыш
+                    const isWin = winningNumber == userBet;
+
+                    // Показываем результат
+                    resultDiv.innerHTML = `
+                        <h2>🎲 Выпало: ${winningNumber}</h2>
+                        <h3 style="color: ${isWin ? 'green' : 'red'}">
+                            ${isWin ? '🎉 ВЫИГРЫШ!' : '😔 Проигрыш'}
+                        </h3>
+                    `;
+
+                    // Отправляем результат в бота
+                    sendResult(winningNumber, isWin);
+
+                    spinBtn.disabled = false;
+                    isSpinning = false;
+                }
+            }
+
+            animate();
+        }
+
+        // Отправка результата
+        function sendResult(winningNumber, isWin) {
+            const resultData = {
+                type: "roulette_result",
+                user_bet: userBet,
+                winning_number: winningNumber,
+                is_win: isWin,
+                bet_amount: 100
+            };
+
+            // Проверяем Telegram Web App
+            if (window.Telegram && Telegram.WebApp) {
+                Telegram.WebApp.sendData(JSON.stringify(resultData));
+
+                // Закрываем через 3 секунды
+                setTimeout(() => {
+                    Telegram.WebApp.close();
+                }, 3000);
+            } else {
+                // Для теста в браузере
+                console.log("Результат:", resultData);
+                alert(`Результат: ${winningNumber} (${isWin ? 'Выигрыш' : 'Проигрыш'})`);
+            }
+        }
+
+        // Запуск
+        drawRoulette();
+        spinBtn.addEventListener('click', spinWheel);
+
+        // Telegram Web App
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.expand();
+            Telegram.WebApp.ready();
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 Рулетка</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .user-bet {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .roulette-container {
+            position: relative;
+            margin: 20px auto;
+            width: 400px;
+            height: 400px;
+        }
+
+        #rouletteCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 8px solid #ffd700;
+            box-shadow:
+                0 0 30px rgba(255, 215, 0, 0.5),
+                inset 0 0 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .roulette-pointer {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: #ff3333;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            z-index: 10;
+        }
+
+        .controls {
+            margin: 30px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+
+        #spinButton {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 65, 108, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #spinButton:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 65, 108, 0.6);
+        }
+
+        #spinButton:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .result-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .result-number {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 0 0 20px currentColor;
+        }
+
+        .result-text {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .result-win {
+            color: #4caf50;
+            animation: pulse 1s infinite;
+        }
+
+        .result-lose {
+            color: #ff5252;
+        }
+
+        .bet-info {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .bet-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .bet-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .bet-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes confetti {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: var(--c);
+            top: -10px;
+            opacity: 0;
+            z-index: 99;
+        }
+
+        @media (max-width: 500px) {
+            .roulette-container {
+                width: 300px;
+                height: 300px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            #spinButton {
+                padding: 15px 30px;
+                font-size: 1rem;
+            }
+
+            .result-number {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Отправка результата...</div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🎰 РУЛЕТКА</h1>
+            <div class="user-bet">
+                <div id="userBetDisplay">Ваша ставка: </div>
+                <div id="betAmount">Сумма: 100 монет</div>
+            </div>
+        </div>
+
+        <div class="roulette-container">
+            <div class="roulette-pointer"></div>
+            <canvas id="rouletteCanvas" width="400" height="400"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="spinButton">
+                <span id="spinIcon">🎰</span>
+                <span id="spinText">КРУТИТЬ РУЛЕТКУ</span>
+            </button>
+        </div>
+
+        <div class="result-container" id="resultContainer">
+            <div class="result-text">Нажмите "Крутить рулетку" чтобы начать</div>
+        </div>
+
+        <div class="bet-info">
+            <div class="bet-item">
+                <div class="bet-label">Коэффициент</div>
+                <div class="bet-value" id="coefficient">1:1</div>
+            </div>
+            <div class="bet-item">
+                <div class="bet-label">Макс. выигрыш</div>
+                <div class="bet-value" id="maxWin">3500</div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div>ПОСЛЕДНИЙ РЕЗУЛЬТАТ</div>
+                <div class="stat-value" id="lastResult">-</div>
+            </div>
+            <div class="stat-item">
+                <div>ВЫИГРЫШЕЙ</div>
+                <div class="stat-value" id="winsCount">0</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Получаем параметры из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('user_id');
+        const userBet = urlParams.get('bet');
+        const betAmount = 100; // Стандартная сумма ставки
+
+        // Элементы DOM
+        const canvas = document.getElementById('rouletteCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinButton = document.getElementById('spinButton');
+        const spinText = document.getElementById('spinText');
+        const spinIcon = document.getElementById('spinIcon');
+        const resultContainer = document.getElementById('resultContainer');
+        const userBetDisplay = document.getElementById('userBetDisplay');
+        const coefficientDisplay = document.getElementById('coefficient');
+        const maxWinDisplay = document.getElementById('maxWin');
+        const loading = document.getElementById('loading');
+
+        // Конфигурация рулетки
+        const numbers = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+        const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+        const blackNumbers = [2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35];
+
+        // Состояние игры
+        let currentRotation = 0;
+        let isSpinning = false;
+        let winningNumber = null;
+        let lastResults = [];
+        let winsCount = 0;
+
+        // Инициализация
+        function init() {
+            displayUserBet();
+            drawRoulette();
+
+            // Загружаем статистику из localStorage
+            loadStats();
+
+            // Назначаем обработчик клика на кнопку
+            spinButton.addEventListener('click', spinWheel);
+        }
+
+        // Отображение ставки пользователя
+        function displayUserBet() {
+            let betDisplay, coefficient, maxWin;
+
+            if (userBet === 'red') {
+                betDisplay = '🔴 Красное';
+                coefficient = '1:1';
+                maxWin = betAmount * 2;
+            } else if (userBet === 'black') {
+                betDisplay = '⚫ Черное';
+                coefficient = '1:1';
+                maxWin = betAmount * 2;
+            } else if (userBet === 'even') {
+                betDisplay = '🔶 Четное';
+                coefficient = '1:1';
+                maxWin = betAmount * 2;
+            } else if (userBet === 'odd') {
+                betDisplay = '◼️ Нечетное';
+                coefficient = '1:1';
+                maxWin = betAmount * 2;
+            } else if (userBet === '1_18') {
+                betDisplay = '1-18';
+                coefficient = '1:1';
+                maxWin = betAmount * 2;
+            } else if (userBet === '19_36') {
+                betDisplay = '19-36';
+                coefficient = '1:1';
+                maxWin = betAmount * 2;
+            } else {
+                betDisplay = `Число ${userBet}`;
+                coefficient = '35:1';
+                maxWin = betAmount * 36;
+            }
+
+            userBetDisplay.textContent = `Ваша ставка: ${betDisplay}`;
+            coefficientDisplay.textContent = coefficient;
+            maxWinDisplay.textContent = maxWin;
+        }
+
+        // Отрисовка рулетки
+        function drawRoulette() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 10;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(currentRotation * Math.PI / 180);
+
+            // Рисуем сектора
+            for (let i = 0; i < 37; i++) {
+                const startAngle = (i / 37) * 2 * Math.PI;
+                const endAngle = ((i + 1) / 37) * 2 * Math.PI;
+                const number = numbers[i];
+
+                // Определяем цвет сектора
+                let color;
+                if (number === 0) {
+                    color = '#00aa00'; // Зеленый для 0
+                } else if (redNumbers.includes(number)) {
+                    color = '#cc0000'; // Красный
+                } else {
+                    color = '#000000'; // Черный
+                }
+
+                // Рисуем сектор
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Обводка сектора
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Текст числа
+                ctx.save();
+                ctx.rotate(startAngle + (endAngle - startAngle) / 2);
+                ctx.translate(radius * 0.7, 0);
+                ctx.rotate(-(startAngle + (endAngle - startAngle) / 2));
+
+                ctx.fillStyle = number === 0 ? '#ffffff' :
+                               redNumbers.includes(number) ? '#ffffff' : '#ffffff';
+                ctx.font = number <= 9 ? 'bold 24px Arial' : 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(number.toString(), 0, 0);
+
+                ctx.restore();
+            }
+
+            // Центральный круг
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ffd700';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // Вращение рулетки
+        function spinWheel() {
+            if (isSpinning) return;
+
+            isSpinning = true;
+            spinButton.disabled = true;
+            spinText.textContent = 'КРУТИТСЯ...';
+            spinIcon.textContent = '🌀';
+
+            // Случайная сила вращения
+            const spinForce = 25 + Math.random() * 10;
+            let spinSpeed = spinForce;
+            const deceleration = 0.97 + Math.random() * 0.02;
+
+            function animate() {
+                currentRotation += spinSpeed;
+                spinSpeed *= deceleration;
+
+                // Ограничиваем максимальную скорость
+                if (spinSpeed > 50) spinSpeed = 50;
+
+                drawRoulette();
+
+                if (spinSpeed > 0.5) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Определяем выигрышное число
+                    const normalizedRotation = ((currentRotation % 360) + 360) % 360;
+                    const sector = Math.floor((360 - normalizedRotation) / (360 / 37)) % 37;
+                    winningNumber = numbers[sector];
+
+                    // Определяем результат
+                    const isWin = checkWin(winningNumber, userBet);
+
+                    // Показываем результат
+                    showResult(winningNumber, isWin);
+
+                    // Отправляем результат в бота
+                    sendResultToBot(winningNumber, isWin);
+
+                    // Обновляем статистику
+                    updateStats(winningNumber, isWin);
+
+                    // Сбрасываем состояние
+                    setTimeout(() => {
+                        spinButton.disabled = false;
+                        spinText.textContent = 'КРУТИТЬ СНОВА';
+                        spinIcon.textContent = '🔄';
+                        isSpinning = false;
+                    }, 2000);
+                }
+            }
+
+            animate();
+        }
+
+        // Проверка выигрыша
+        function checkWin(number, bet) {
+            if (bet === 'red') {
+                return redNumbers.includes(number);
+            } else if (bet === 'black') {
+                return blackNumbers.includes(number);
+            } else if (bet === 'even') {
+                return number !== 0 && number % 2 === 0;
+            } else if (bet === 'odd') {
+                return number % 2 === 1;
+            } else if (bet === '1_18') {
+                return number >= 1 && number <= 18;
+            } else if (bet === '19_36') {
+                return number >= 19 && number <= 36;
+            } else {
+                return parseInt(bet) === number;
+            }
+        }
+
+        // Показ результата
+        function showResult(number, isWin) {
+            let colorClass, colorSymbol, resultText;
+
+            if (number === 0) {
+                colorClass = 'result-win';
+                colorSymbol = '🟢';
+            } else if (redNumbers.includes(number)) {
+                colorSymbol = '🔴';
+                colorClass = isWin ? 'result-win' : 'result-lose';
+            } else {
+                colorSymbol = '⚫';
+                colorClass = isWin ? 'result-win' : 'result-lose';
+            }
+
+            if (isWin) {
+                resultText = `🎉 ПОБЕДА! 🎉`;
+                createConfetti();
+            } else {
+                resultText = `😔 ПРОИГРЫШ`;
+            }
+
+            resultContainer.innerHTML = `
+                <div class="result-text">Выпало число:</div>
+                <div class="result-number ${colorClass}">${colorSymbol} ${number}</div>
+                <div class="result-text ${colorClass}">${resultText}</div>
+            `;
+
+            // Добавляем в историю
+            lastResults.unshift({number, isWin});
+            if (lastResults.length > 5) lastResults.pop();
+
+            document.getElementById('lastResult').textContent = number;
+        }
+
+        // Отправка результата в бота
+        function sendResultToBot(number, isWin) {
+            loading.classList.add('active');
+
+            const resultData = {
+                type: 'roulette_result',
+                user_id: userId,
+                user_bet: userBet,
+                winning_number: number,
+                is_win: isWin,
+                bet_amount: betAmount,
+                timestamp: Date.now()
+            };
+
+            // Проверяем, находимся ли мы в Web App Telegram
+            if (window.Telegram && window.Telegram.WebApp) {
+                // Отправляем данные в бота через Telegram Web App
+                Telegram.WebApp.sendData(JSON.stringify(resultData));
+
+                // Закрываем Web App через 3 секунды
+                setTimeout(() => {
+                    Telegram.WebApp.close();
+                    loading.classList.remove('active');
+                }, 3000);
+            } else {
+                // Для отладки в браузере
+                console.log('Результат рулетки:', resultData);
+                setTimeout(() => {
+                    loading.classList.remove('active');
+                    alert('Результат отправлен! (В браузере только имитация)');
+                }, 2000);
+            }
+        }
+
+        // Обновление статистики
+        function updateStats(number, isWin) {
+            if (isWin) {
+                winsCount++;
+                document.getElementById('winsCount').textContent = winsCount;
+            }
+
+            // Сохраняем в localStorage
+            saveStats();
+        }
+
+        // Загрузка статистики
+        function loadStats() {
+            const savedWins = localStorage.getItem('roulette_wins');
+            if (savedWins) {
+                winsCount = parseInt(savedWins);
+                document.getElementById('winsCount').textContent = winsCount;
+            }
+        }
+
+        // Сохранение статистики
+        function saveStats() {
+            localStorage.setItem('roulette_wins', winsCount.toString());
+        }
+
+        // Создание конфетти для победы
+        function createConfetti() {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.setProperty('--c', colors[Math.floor(Math.random() * colors.length)]);
+                confetti.style.width = Math.random() * 10 + 5 + 'px';
+                confetti.style.height = Math.random() * 10 + 5 + 'px';
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+
+                document.body.appendChild(confetti);
+
+                const animation = confetti.animate([
+                    { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+                    { transform: `translateY(${window.innerHeight}px) rotate(${Math.random() * 720 - 360}deg)`, opacity: 0 }
+                ], {
+                    duration: Math.random() * 3000 + 2000,
+                    easing: 'cubic-bezier(0.215, 0.61, 0.355, 1)'
+                });
+
+                animation.onfinish = () => confetti.remove();
+            }
+        }
+
+        // Запуск при загрузке страницы
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
 </body>
 </html>

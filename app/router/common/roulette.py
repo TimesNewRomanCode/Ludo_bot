@@ -1,73 +1,91 @@
 from aiogram import Router, F, types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.filters import Command
-import asyncio
-import random
+from aiogram.filters import Command, or_f
+from aiogram.types import WebAppInfo
 
 roul_router = Router()
 
 RED_NUMBERS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]
-ROULETTE_URL = "https://htmlpreview.github.io/?https://raw.githubusercontent.com/TimesNewRomanCode/Ludo_bot/roulette-test/app/static/roulette.html"
+
+# Ваш IP или домен
+WEBAPP_URL = "http://localhost:8080/roulette.html"
 
 
-@roul_router.message(F.text == "/roulette")
+@roul_router.message(or_f(Command("roulette"), F.text == "🎰 Рулетка"))
 async def start_roulette(message: types.Message):
     builder = InlineKeyboardBuilder()
-    builder.button(text="🟢 0", callback_data="roulette_0")
+
+    # Добавляем числа
+    builder.button(text="🟢 0", callback_data="bet_0")
     for i in range(1, 37):
         color = "🔴" if i in RED_NUMBERS else "⚫"
-        builder.button(text=f"{color} {i}", callback_data=f"roulette_{i}")
+        builder.button(text=f"{color} {i}", callback_data=f"bet_{i}")
+
     builder.adjust(3)
-    await message.answer("🎰 Выберите число:", reply_markup=builder.as_markup())
+
+    await message.answer(
+        "🎰 *Выберите число для ставки:*\n"
+        "Коэффициент: 35:1",
+        reply_markup=builder.as_markup(),
+        parse_mode="Markdown"
+    )
 
 
-@roul_router.callback_query(F.data.startswith("roulette_"))
-async def show_roulette_html(callback: types.CallbackQuery):
-    user_choice = int(callback.data.split("_")[1])
+@roul_router.callback_query(F.data.startswith("bet_"))
+async def place_bet(callback: types.CallbackQuery):
+    user_choice = callback.data[4:]  # bet_23 -> 23
 
-    kb = InlineKeyboardBuilder()
-    kb.button(text="🎰 ИГРАТЬ В РУЛЕТКУ", url=f"{ROULETTE_URL}?choice={user_choice}")
-    kb.adjust(1)
+    # Создаем кнопку Web App
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="🎰 Крутить рулетку!",
+        web_app=WebAppInfo(url=f"{WEBAPP_URL}?bet={user_choice}")
+    )
 
     await callback.message.answer(
-        f"🎰 **Ваш выбор: {user_choice}**\n"
-        f"🔥 Кликните → крутите → нажмите «В БОТ»!",
-        reply_markup=kb.as_markup(),
+        f"✅ *Ставка принята!*\n"
+        f"🎯 Ваше число: {user_choice}\n"
+        f"💰 Ставка: 100 монет\n\n"
+        f"Нажмите кнопку ниже чтобы крутить:",
+        reply_markup=builder.as_markup(),
         parse_mode="Markdown"
     )
     await callback.answer()
 
 
-# ✅ ГЛАВНЫЙ ХЕНДЛЕР — ЛОВИМ ЛЮБОЕ СООБЩЕНИЕ с roulette_result
-@roul_router.message(F.text.contains("roulette_result"))
-async def roulette_result(message: types.Message):
-    """Ловим результат из HTML (любой текст содержащий 'roulette_result')"""
-    text = message.text.lower()
+@roul_router.message(F.web_app_data)
+async def handle_web_app_data(message: types.Message):
+    """Обрабатываем результат из Web App"""
+    import json
 
-    # Ищем числа в тексте: roulette_result_23_14 или /roulette_result 23 14
-    import re
-    numbers = re.findall(r'roulette_result[_\s]*(\d+)', text)
+    data = json.loads(message.web_app_data.data)
 
-    if len(numbers) >= 1:
-        result = int(numbers[0])
+    if data.get("type") == "roulette_result":
+        winning_number = data.get("winning_number")
+        user_bet = data.get("user_bet")
+        is_win = data.get("is_win", False)
 
-        # Ищем второе число (выбор пользователя)
-        choice_numbers = re.findall(r'choice[_\s]*(\d+)', text)
-        user_choice = int(choice_numbers[0]) if choice_numbers else None
+        # Определяем цвет числа
+        if winning_number == 0:
+            color = "🟢"
+        elif winning_number in RED_NUMBERS:
+            color = "🔴"
+        else:
+            color = "⚫"
 
-        win_status = "🎉 **ВЫИГРЫШ x35 коинов!**" if user_choice and result == user_choice else "😔 Проигрыш"
+        if is_win:
+            result = "🎉 *ВЫ ВЫИГРАЛИ!* 🎉"
+            win_amount = 3500  # 100 * 35
+        else:
+            result = "😔 *Проигрыш*"
+            win_amount = -100
 
         await message.answer(
-            f"🎰 **РЕЗУЛЬТАТ РУЛЕТКИ: {result}**\n"
-            f"🎯 **Ваш выбор: {user_choice if user_choice else 'неизвестно'}**\n\n"
-            f"{win_status}\n\n🔄 `/roulette` — еще раз!",
+            f"🎰 *РЕЗУЛЬТАТ РУЛЕТКИ*\n\n"
+            f"{color} *Выпало число:* {winning_number}\n"
+            f"🎯 *Ваша ставка:* {user_bet}\n\n"
+            f"{result}\n"
+            f"💰 *Сумма:* {win_amount} монет\n\n"
+            f"🎰 /roulette - играть снова",
             parse_mode="Markdown"
         )
-    else:
-        await message.answer("❌ Результат не распознан. Используйте `/roulette`")
-
-
-# Дополнительный хендлер для команды
-@roul_router.message(Command("roulette_result"))
-async def roulette_result_cmd(message: types.Message):
-    await message.answer("🎰 Используйте `/roulette` для начала!")

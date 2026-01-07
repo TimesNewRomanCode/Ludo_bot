@@ -28,18 +28,32 @@ async def main():
         balance_router,
         roul_router
     )
+
     await set_commands(bot)
-    polling_task = asyncio.create_task(dp.start_polling(bot))
 
-    await asyncio.gather(polling_task)
-
+    # Функция для отдачи HTML рулетки
     async def handle_roulette(request):
         async with aiofiles.open("static/roulette.html", "r") as f:
-            return web.Response(text=await f.read(), content_type="text/html")
-    print("dvmdkmks")
+            html = await f.read()
+        return web.Response(text=html, content_type="text/html")
+
+    # Запускаем веб-сервер
     app = web.Application()
-    app.router.add_static('/static/', path='static/', show_index=True)
     app.router.add_get('/roulette.html', handle_roulette)
-    web.run_app(app, host='0.0.0.0', port=8080)
-    logging.info("Бот завершает работу.")
+
+    # Запускаем веб-сервер в фоне
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', 8080)
+
+    print("Веб-сервер запущен на порту 8080")
+    await site.start()
+
+    # Запускаем бота
+    print("Бот запущен")
     await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
