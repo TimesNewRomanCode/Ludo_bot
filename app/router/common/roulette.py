@@ -1,5 +1,6 @@
 from aiogram import Router, F, types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.filters import Command
 import asyncio
 import random
 
@@ -30,24 +31,29 @@ async def show_roulette_html(callback: types.CallbackQuery):
 
     await callback.message.answer(
         f"🎰 **Ваш выбор: {user_choice}**\n"
-        f"🔥 Кликните → крутите → бот получит результат!",
+        f"🔥 Кликните → крутите → нажмите «В БОТ» для результата!",
         reply_markup=kb.as_markup(),
         parse_mode="Markdown"
     )
     await callback.answer()
 
 
-@roul_router.message(F.text.startswith("roulette_result_"))
+# ✅ ФИНАЛЬНЫЙ ХЕНДЛЕР — ЛОВИМ КОМАНДУ /roulette_result!
+@roul_router.message(Command("roulette_result"))
 async def roulette_result(message: types.Message):
-    parts = message.text.split("_")
-    result = int(parts[2])
-    user_choice = int(parts[3]) if len(parts) > 3 else None
+    """Обрабатываем результат /roulette_result 23 14"""
+    parts = message.text.split()
+    if len(parts) >= 3:
+        result = int(parts[1])
+        user_choice = int(parts[2])
 
-    win_status = "🎉 **ВЫИГРЫШ x35!**" if user_choice and result == user_choice else "😔 Проигрыш"
+        win_status = "🎉 **ВЫИГРЫШ x35 коинов!**" if result == user_choice else "😔 Проигрыш"
 
-    await message.answer(
-        f"🎰 **РЕЗУЛЬТАТ: {result}**\n"
-        f"🎯 {'Выбор: ' + str(user_choice) if user_choice else ''}\n\n"
-        f"{win_status}\n\n/roulette — еще раз!",
-        parse_mode="Markdown"
-    )
+        await message.answer(
+            f"🎰 **РЕЗУЛЬТАТ РУЛЕТКИ: {result}**\n"
+            f"🎯 **Ваш выбор: {user_choice}**\n\n"
+            f"{win_status}\n\n🔄 `/roulette` — еще раз!",
+            parse_mode="Markdown"
+        )
+    else:
+        await message.answer("❌ Неверный формат! Используйте: `/roulette_result НОМЕР_РЕЗУЛЬТАТА НОМЕР_ВЫБРА`")
